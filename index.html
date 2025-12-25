@@ -40,6 +40,54 @@
 
 <body>
 
+    <!-- Facebook Playable Ad API - Required for Facebook Playable Ads -->
+    <script>
+        // Facebook Playable Ad API - Mock for validator testing
+        // In production, Facebook will automatically inject the real API
+        // This must be defined before any other scripts run
+        (function() {
+            if (typeof window.FbPlayableAd === 'undefined') {
+                window.FbPlayableAd = {
+                    onCTAClick: function() {
+                        // This will be called when CTA button is clicked
+                        // In production, Facebook's API will handle the redirect
+                        // Fallback: Try MRAID or window.open
+                        if (typeof window.mraid !== 'undefined' && window.mraid.open) {
+                            window.mraid.open('https://apps.apple.com/app/your-app-id');
+                        } else if (typeof window.open === 'function') {
+                            window.open('https://apps.apple.com/app/your-app-id', '_blank');
+                        }
+                    }
+                };
+            }
+            // Make it available as a global variable (not just window property)
+            if (typeof FbPlayableAd === 'undefined') {
+                var FbPlayableAd = window.FbPlayableAd;
+            }
+        })();
+    </script>
+
+    <!-- Google Exit API - Required for Google Playable Ads -->
+    <!-- Inline implementation for validator (Google will inject the real script in production) -->
+    <script>
+        // Google Exit API - Mock for validator testing
+        // In production, Google will automatically inject the real exitapi.js
+        if (typeof ExitApi === 'undefined') {
+            window.ExitApi = {
+                exit: function() {
+                    // This will be called when CTA button is clicked
+                    // In production, Google's API will handle the redirect
+                    // Fallback: Try MRAID or window.open
+                    if (typeof window.mraid !== 'undefined' && window.mraid.open) {
+                        window.mraid.open('https://play.google.com/store/apps');
+                    } else if (typeof window.open === 'function') {
+                        window.open('https://play.google.com/store/apps', '_blank');
+                    }
+                }
+            };
+        }
+    </script>
+
     <!-- MRAID SDK Implementation -->
     <script>
         (function () {
@@ -5207,17 +5255,48 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32> {
             }
 
             async load() {
-                await PIXI.Assets.load([
-                    this.backgroundPath,
-                    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAAAkCAMAAAAdBYxUAAAABGdBTUEAALGOfPtRkwAAAFFQTFRFAAAA+2M4D2iN4p97/uSBlZqx9Myh3OHn/Gg7////7qFg/MeCmBot9LQbTOX93UQsFJDDttU89Kxmq2FY3/b1LMX2NFVRcao0Q0pfbz5Dy4Fev2ojdAAAABt0Uk5TAP//////////////////////////////////xGlyNQAAAFxJREFUSIljYBgFQxpIogHCqmhrELox2BUSYRmVDIII8yIB7AqRVdHeIJAkCxTgUkhvg1iQAG6DINawsNDLIJgHRw3CbdDgirXBlrIHV+4ffCUk0YroWIuMgiEEAD5lQTGyHPcgAAAAAElFTkSuQmCC'
-                ]);
+                try {
+                    const coinBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAAAkCAMAAAAdBYxUAAAABGdBTUEAALGOfPtRkwAAAFFQTFRFAAAA+2M4D2iN4p97/uSBlZqx9Myh3OHn/Gg7////7qFg/MeCmBot9LQbTOX93UQsFJDDttU89Kxmq2FY3/b1LMX2NFVRcao0Q0pfbz5Dy4Fev2ojdAAAABt0Uk5TAP//////////////////////////////////xGlyNQAAAFxJREFUSIljYBgFQxpIogHCqmhrELox2BUSYRmVDIII8yIB7AqRVdHeIJAkCxTgUkhvg1iQAG6DINawsNDLIJgHRw3CbdDgirXBlrIHV+4ffCUk0YroWIuMgiEEAD5lQTGyHPcgAAAAAElFTkSuQmCC';
 
-                this.setupCoinTextures();
-                this.showStartScreen();
+                    const bgImage = new Image();
+                    bgImage.crossOrigin = 'anonymous';
+                    const bgTexturePromise = new Promise((resolve, reject) => {
+                        bgImage.onload = () => {
+                            const bgTexture = PIXI.Texture.from(bgImage);
+                            PIXI.Assets.cache.set('bg', bgTexture);
+                            resolve(bgTexture);
+                        };
+                        bgImage.onerror = reject;
+                        bgImage.src = this.backgroundPath;
+                    });
+
+                    const coinImage = new Image();
+                    coinImage.crossOrigin = 'anonymous';
+                    const coinTexturePromise = new Promise((resolve, reject) => {
+                        coinImage.onload = () => {
+                            const coinTexture = PIXI.Texture.from(coinImage);
+                            PIXI.Assets.cache.set('coin', coinTexture);
+                            resolve(coinTexture);
+                        };
+                        coinImage.onerror = reject;
+                        coinImage.src = coinBase64;
+                    });
+
+                    await Promise.all([bgTexturePromise, coinTexturePromise]);
+
+                    this.setupCoinTextures();
+                    this.showStartScreen();
+                } catch (error) {
+                    try {
+                        this.showStartScreen();
+                    } catch (e) {
+                        // Silent error handling
+                    }
+                }
             }
 
             setupCoinTextures() {
-                const coinTexture = PIXI.Assets.cache.get('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAAAkCAMAAAAdBYxUAAAABGdBTUEAALGOfPtRkwAAAFFQTFRFAAAA+2M4D2iN4p97/uSBlZqx9Myh3OHn/Gg7////7qFg/MeCmBot9LQbTOX93UQsFJDDttU89Kxmq2FY3/b1LMX2NFVRcao0Q0pfbz5Dy4Fev2ojdAAAABt0Uk5TAP//////////////////////////////////xGlyNQAAAFxJREFUSIljYBgFQxpIogHCqmhrELox2BUSYRmVDIII8yIB7AqRVdHeIJAkCxTgUkhvg1iQAG6DINawsNDLIJgHRw3CbdDgirXBlrIHV+4ffCUk0YroWIuMgiEEAD5lQTGyHPcgAAAAAElFTkSuQmCC');
+                const coinTexture = PIXI.Assets.get('coin');
                 if (!coinTexture) {
                     return;
                 }
@@ -5801,9 +5880,67 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32> {
                 overlay.endFill();
                 restartContainer.addChild(overlay);
 
+                // CTA Button (Play Now) - Required for Google Playable Ads
+                const ctaButtonContainer = new PIXI.Container();
+                ctaButtonContainer.x = this.app.screen.width / 2;
+                ctaButtonContainer.y = this.app.screen.height / 2 - 40;
+
+                const ctaButtonBg = new PIXI.Graphics();
+                const ctaBtnWidth = 220;
+                const ctaBtnHeight = 55;
+                ctaButtonBg.beginFill(0xFF6B35);
+                ctaButtonBg.drawRoundedRect(-ctaBtnWidth / 2, -ctaBtnHeight / 2, ctaBtnWidth, ctaBtnHeight, 12);
+                ctaButtonBg.endFill();
+                ctaButtonContainer.addChild(ctaButtonBg);
+
+                const ctaButtonText = new PIXI.Text({
+                    text: 'Play Now',
+                    style: {
+                        fontFamily: 'Arial, sans-serif',
+                        fontSize: 26,
+                        fill: 0xFFFFFF,
+                        fontWeight: 'bold',
+                    }
+                });
+                ctaButtonText.anchor.set(0.5);
+                ctaButtonContainer.addChild(ctaButtonText);
+
+                ctaButtonContainer.eventMode = 'static';
+                ctaButtonContainer.cursor = 'pointer';
+                ctaButtonContainer.hitArea = new PIXI.Rectangle(-ctaBtnWidth / 2, -ctaBtnHeight / 2, ctaBtnWidth, ctaBtnHeight);
+
+                ctaButtonContainer.on('pointerdown', () => {
+                    // Facebook Playable Ad - Direct call for validator detection
+                    // This must be called directly for Facebook Validator to detect it
+                    if (typeof FbPlayableAd !== 'undefined' && FbPlayableAd && typeof FbPlayableAd.onCTAClick === 'function') {
+                        try {
+                            FbPlayableAd.onCTAClick();
+                        } catch (e) {
+                            // Silent error handling
+                        }
+                    } else if (typeof window.FbPlayableAd !== 'undefined' && window.FbPlayableAd && typeof window.FbPlayableAd.onCTAClick === 'function') {
+                        try {
+                            window.FbPlayableAd.onCTAClick();
+                        } catch (e) {
+                            // Silent error handling
+                        }
+                    }
+                    // Google Playable Ad - ExitApi.exit() call
+                    if (typeof ExitApi !== 'undefined' && ExitApi && typeof ExitApi.exit === 'function') {
+                        try {
+                            ExitApi.exit();
+                        } catch (e) {
+                            // Silent error handling
+                        }
+                    }
+                });
+
+                restartContainer.addChild(ctaButtonContainer);
+
+                // Restart Button
                 const buttonContainer = new PIXI.Container();
                 buttonContainer.x = this.app.screen.width / 2;
-                buttonContainer.y = this.app.screen.height / 2;
+                buttonContainer.y = this.app.screen.height / 2 + 40;
 
                 const buttonBg = new PIXI.Graphics();
                 const btnWidth = 200;
@@ -5933,7 +6070,8 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32> {
              * Adds and scales background sprite based on device type
              */
             addBackground() {
-                const bg = PIXI.Sprite.from(this.backgroundPath);
+                // Alias kullanarak background'u al
+                const bg = PIXI.Sprite.from('bg');
 
                 if (this.isMobile) {
                     const bgAspect = 2560 / 1440;
@@ -6192,7 +6330,7 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32> {
     </script>
 
     <!-- Main Application (Inline) -->
-    <script>
+    <script type="module">
         /**
          * Kaan ÇAKAR theanswer! - 2025
          */
@@ -6277,5 +6415,14 @@ fn setSaturation(c: vec3<f32>, s: f32) -> vec3<f32> {
     </script>
 
 </body>
+
+<script>
+    console.log(
+        "%c Developed by Kaan Çakar %c theanswer! ", 
+        "background: #000000; color: #00ff00; padding: 5px; border-radius: 4px; font-weight: bold; font-size: 12px;",
+        "background: #ff0000; color: #ffffff; padding: 2px; border-radius: 2px; font-weight: bold; font-size: 8px; margin-left: 3px;"
+    );
+    console.log("%c Portfolio: https://kaancakar.github.io ", "color: #555; font-size: 10px; margin-top: 5px;");
+</script>
 
 </html>
